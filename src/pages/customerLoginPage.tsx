@@ -29,11 +29,11 @@ const CustomerLoginPage = () => {
             customer_id: customer._id,
         });
         localStorage.removeItem("pendingBooking");
-        navigate("/bookings"); // go straight to bookings dashboard
+        navigate("/booking"); // go straight to bookings dashboard
         return;
         }
 
-        navigate("/bookings");
+        navigate("/customer/dashboard");
     } catch (err) {
         console.error("Login error:", err);
         alert("Login failed. Please check your name and phone.");
