@@ -12,6 +12,11 @@ import LoginPage from "./pages/SigninPage";
 import BusinessRegistrationForm  from "./pages/BusinessRegisterPage";
 import RegisterPage from "./pages/SignupPage"; 
 import AvailabilityPage from "./pages/Availbilty";
+import CustomerDashboard from "./pages/customerDashbaord";
+import CustomerLoginPage from "./pages/customerLoginPage";
+import CustomerRegisterPage from "./pages/customerRegistrationPage";
+
+
 
 const queryClient = new QueryClient();
 
@@ -37,6 +42,14 @@ const App = () => (
           <Route path="/dashboard" element={<DashboardWrapper />} />
           <Route path="/:businessId" element={<Index />} />
           <Route path="/:businessId/book" element={<BookingPage />} />
+
+          <Route path="/customer/login" element={<CustomerLoginPage />} />
+          <Route path="/customer/register" element={<CustomerRegisterPage />} />
+          <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+
+
+
+
           <></>
 
           {/* Fallback */}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams , useNavigate } from "react-router-dom";
 import { format, startOfDay } from "date-fns";
 import { CalendarIcon, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,13 +15,13 @@ import axios from "axios";
 
 const BookingPage = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+
   const { businessId } = useParams();
 
   const [businessInfo, setBusinessInfo] = useState<any>(null);
   const [availableSlots, setAvailableSlots] = useState<any[]>([]);
   const [service, setService] = useState("");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("");
   const [notes, setNotes] = useState("");
@@ -107,26 +107,38 @@ const BookingPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!service || !name || !phone || !date || !time) {
+    if (!service || !date || !time) {
       toast({ title: "Please fill all required fields", variant: "destructive" });
       return;
     }
+     const customerId = localStorage.getItem("customerId");
+     const bookingPayload = {
+      business_id: businessId,
+      service_id: service,
+      booking_date: format(date, "yyyy-MM-dd"),
+      booking_time: time,
+      notes,
+    };
+
+     if (!customerId) {
+    // Save booking intent and redirect to login
+    localStorage.setItem("pendingBooking", JSON.stringify(bookingPayload));
+    toast({ title: "Please log in to complete your booking" });
+    navigate("/customer/login");
+    return;
+   }
+
 
     try {
       await axios.post("https://slotly-backend-92ig.onrender.com/api/bookings/create", {
-        business_id: businessId,
-        service_id: service, // service name
-        customer_id: name,
-        customer_phone: phone,
-        booking_date: format(date, "yyyy-MM-dd"),
-        booking_time: time,
-        notes,
-      });
+        ...bookingPayload,
+      customer_id: customerId,
+    });
       toast({
         title: "Booking created!",
         description: `${name}, your ${service} is confirmed for ${format(date, "PPP")} at ${time}.`,
       });
-      setService(""); setName(""); setPhone(""); setDate(undefined); setTime(""); setNotes("");
+      setService(""); setDate(undefined); setTime(""); setNotes("");
     } catch (err) {
       console.error("Error creating booking:", err);
       toast({ title: "Booking failed", description: "Please try again.", variant: "destructive" });
@@ -166,17 +178,17 @@ const BookingPage = () => {
           </Select>
         </div>
 
-        {/* Name */}
+        {/* Name 
         <div className="space-y-2">
           <Label>Your Name *</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" />
         </div>
 
-        {/* Phone */}
+         Phone 
         <div className="space-y-2">
           <Label>Phone Number *</Label>
           <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter phone number" type="tel" />
-        </div>
+        </div>*/}
 
         {/* Date */}
         <div className="space-y-2">
