@@ -29,7 +29,7 @@ const CustomerLoginPage = () => {
             customer_id: customer._id,
         });
         localStorage.removeItem("pendingBooking");
-        navigate("/booking"); // go straight to bookings dashboard
+        navigate("/customer/dashboard"); // go straight to bookings dashboard
         return;
         }
 
