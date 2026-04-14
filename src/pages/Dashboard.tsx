@@ -158,10 +158,12 @@ const Dashboard = ({ userId }: { userId: string }) => {
               <TableBody>
                 {bookings.map((b: any, idx: number) => (
                   <TableRow key={idx}>
-                    <TableCell className="font-medium">{b.customerName || b.customer_id}</TableCell>
+                    <TableCell className="font-medium">
+                      {b.customerName || b.customer_id?.name}
+                    </TableCell>
                     <TableCell className="hidden sm:table-cell">
-                      <a href={`tel:${b.customer_phone}`} className="text-blue-600 underline">
-                        {b.customer_phone}
+                      <a href={`tel:${b.customer_id?.phone}`} className="text-blue-600 underline">
+                        {b.customer_id?.phone}
                       </a>
                     </TableCell>
                     <TableCell>{b.serviceName || b.service_id}</TableCell>
