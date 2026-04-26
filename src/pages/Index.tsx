@@ -7,6 +7,7 @@ import PhotosSection from "@/components/PhotosSection";
 import AboutSection from "@/components/AboutSection";
 import Footer from "@/components/Footer";
 import CTASection from "@/components/CTASection";
+//import EmployeeRegistrationPage from "./EmployeeRegisterPage";
 
 const Index = () => {
   const { businessId } = useParams();
@@ -37,6 +38,7 @@ const Index = () => {
       <AboutSection businessInfo={businessInfo} />
       <CTASection businessInfo={businessInfo}  />
       <Footer businessInfo={businessInfo} />
+      
 
     </div>
   );

@@ -15,6 +15,7 @@ import AvailabilityPage from "./pages/Availbilty";
 import CustomerDashboard from "./pages/customerDashbaord";
 import CustomerLoginPage from "./pages/customerLoginPage";
 import CustomerRegisterPage from "./pages/customerRegistrationPage";
+import EmployeeRegistrationPage from "./pages/EmployeeRegisterPage";
 
 
 
@@ -48,7 +49,7 @@ const App = () => (
           <Route path="/customer/dashboard" element={<CustomerDashboard />} />
 
 
-
+          <Route path="/employees/:businessId" element={<EmployeeRegistrationPage />} />
 
           <></>
 

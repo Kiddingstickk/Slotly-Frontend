@@ -162,7 +162,7 @@ const BusinessRegistrationForm = () => {
     toast({ title: "Business registered successfully!" });
 
     // ✅ Redirect to availability setup with businessId
-    navigate(`/availability/${createdBusiness._id}`);
+    navigate(`/employees/${createdBusiness._id}`);
   } catch (err) {
     console.error("Registration failed:", err);
     toast({ title: "Error registering business", variant: "destructive" });

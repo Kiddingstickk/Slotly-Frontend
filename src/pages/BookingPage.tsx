@@ -4,7 +4,6 @@ import { format, startOfDay } from "date-fns";
 import { CalendarIcon, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,44 +15,49 @@ import axios from "axios";
 const BookingPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-
   const { businessId } = useParams();
 
   const [businessInfo, setBusinessInfo] = useState<any>(null);
+  const [employees, setEmployees] = useState<any[]>([]);   // NEW
   const [availableSlots, setAvailableSlots] = useState<any[]>([]);
   const [service, setService] = useState("");
+  const [employeeId, setEmployeeId] = useState("");        // NEW
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Fetch business info
+  // Fetch business info + employees
   useEffect(() => {
-    const fetchBusiness = async () => {
+    const fetchBusinessAndEmployees = async () => {
       try {
-        const res = await axios.get(`https://slotly-backend-92ig.onrender.com/api/businesses/${businessId}`);
-        setBusinessInfo(res.data);
+        const [bizRes, empRes] = await Promise.all([
+          axios.get(`https://slotly-backend-92ig.onrender.com/api/businesses/${businessId}`),
+          axios.get(`https://slotly-backend-92ig.onrender.com/api/employees/business/${businessId}`)
+        ]);
+        setBusinessInfo(bizRes.data);
+        setEmployees(empRes.data);
       } catch (err) {
-        console.error("Error fetching business:", err);
+        console.error("Error fetching business or employees:", err);
       }
     };
-    if (businessId) fetchBusiness();
+    if (businessId) fetchBusinessAndEmployees();
   }, [businessId]);
 
-  // Fetch availability when date changes
+  // Fetch availability when date or employee changes
   useEffect(() => {
     const fetchAvailability = async () => {
-      if (!date || !businessId) return;
+      if (!date || !businessId || !employeeId) return;
       try {
-        const dayName = format(date, "EEEE"); // "Monday"
-        const dateString = format(date, "yyyy-MM-dd"); // "2026-03-09"
+        const dayName = format(date, "EEEE");
+        const dateString = format(date, "yyyy-MM-dd");
 
         const res = await axios.get(
-          `https://slotly-backend-92ig.onrender.com/api/availability/business/${businessId}/slots?day=${dayName}&date=${dateString}`
+          `https://slotly-backend-92ig.onrender.com/api/availability/business/${businessId}/slots?employeeId=${employeeId}&day=${dayName}&date=${dateString}`
         );
 
         let slots = res.data.slots || [];
 
-        // If selected date is today, mark past times
+        // Mark past times if today
         const today = startOfDay(new Date());
         if (date.toDateString() === today.toDateString()) {
           const now = new Date();
@@ -61,10 +65,7 @@ const BookingPage = () => {
             const [hh, mm] = s.time.split(":").map(Number);
             const slotDate = new Date();
             slotDate.setHours(hh, mm, 0, 0);
-            return {
-              ...s,
-              past: slotDate < now,
-            };
+            return { ...s, past: slotDate < now };
           });
         }
 
@@ -74,28 +75,39 @@ const BookingPage = () => {
       }
     };
     fetchAvailability();
-  }, [date, businessId]);
+  }, [date, businessId, employeeId]);
+
+const filteredEmployees = service
+  ? employees.filter((emp: any) => emp.services.includes(service))
+  : employees;
+
+const filteredServices = employeeId
+  ? businessInfo?.services.filter((srv: any) => {
+      const emp = employees.find((e: any) => e._id === employeeId);
+      return emp?.services.includes(srv.name);
+    })
+  : businessInfo?.services || [];
+
 
   // Helper: parse service duration into minutes
   const getServiceDurationMinutes = (serviceName: string) => {
     const s = businessInfo?.services.find((srv: any) => srv.name === serviceName);
     if (!s || !s.duration) return 0;
-
     const lower = s.duration.toLowerCase();
     if (lower.includes("hour")) {
       const hours = parseInt(lower);
       return hours * 60;
     }
-    return parseInt(lower); // assume "30 mins" etc.
+    return parseInt(lower);
   };
 
   // Check if a slot is valid for the selected service
   const isSlotAvailable = (index: number) => {
-    if (!service) return true; // no service selected yet
+    if (!service) return true;
     const serviceDuration = getServiceDurationMinutes(service);
     if (!serviceDuration) return true;
 
-    const slotDuration = businessInfo?.slot_duration || 30; // fallback
+    const slotDuration = businessInfo?.slot_duration || 30;
     const slotsNeeded = Math.ceil(serviceDuration / slotDuration);
 
     for (let i = 0; i < slotsNeeded; i++) {
@@ -107,38 +119,36 @@ const BookingPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!service || !date || !time) {
+    if (!service || !date || !time || !employeeId) {
       toast({ title: "Please fill all required fields", variant: "destructive" });
       return;
     }
-     const customerId = localStorage.getItem("customerId");
-     const bookingPayload = {
+
+    const customerId = localStorage.getItem("customerId");
+    const bookingPayload = {
       business_id: businessId,
+      employee_id: employeeId,   // include staff
       service_id: service,
+      customer_id: customerId,
       booking_date: format(date, "yyyy-MM-dd"),
       booking_time: time,
       notes,
     };
 
-     if (!customerId) {
-    // Save booking intent and redirect to login
-    localStorage.setItem("pendingBooking", JSON.stringify(bookingPayload));
-    toast({ title: "Please log in to complete your booking" });
-    navigate("/customer/login");
-    return;
-   }
-
+    if (!customerId) {
+      localStorage.setItem("pendingBooking", JSON.stringify(bookingPayload));
+      toast({ title: "Please log in to complete your booking" });
+      navigate("/customer/login");
+      return;
+    }
 
     try {
-      await axios.post("https://slotly-backend-92ig.onrender.com/api/bookings/create", {
-        ...bookingPayload,
-      customer_id: customerId,
-    });
+      await axios.post("https://slotly-backend-92ig.onrender.com/api/bookings/create", bookingPayload);
       toast({
         title: "Booking created!",
-        description: `${name}, your ${service} is confirmed for ${format(date, "PPP")} at ${time}.`,
+        description: `Your ${service} is confirmed for ${format(date, "PPP")} at ${time}.`,
       });
-      setService(""); setDate(undefined); setTime(""); setNotes("");
+      setService(""); setEmployeeId(""); setDate(undefined); setTime(""); setNotes("");
     } catch (err) {
       console.error("Error creating booking:", err);
       toast({ title: "Booking failed", description: "Please try again.", variant: "destructive" });
@@ -169,7 +179,7 @@ const BookingPage = () => {
           <Select value={service} onValueChange={setService}>
             <SelectTrigger><SelectValue placeholder="Select a service" /></SelectTrigger>
             <SelectContent>
-              {businessInfo.services.map((s: any, idx: number) => (
+              {filteredServices.map((s: any, idx: number) => (
                 <SelectItem key={idx} value={s.name}>
                   {s.name} — ₹{s.price}
                 </SelectItem>
@@ -178,17 +188,20 @@ const BookingPage = () => {
           </Select>
         </div>
 
-        {/* Name 
+         {/* Employee */}
         <div className="space-y-2">
-          <Label>Your Name *</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" />
+          <Label>Staff *</Label>
+          <Select value={employeeId} onValueChange={setEmployeeId}>
+            <SelectTrigger><SelectValue placeholder="Select a staff member" /></SelectTrigger>
+            <SelectContent>
+              {filteredEmployees.map((emp: any) => (
+                <SelectItem key={emp._id} value={emp._id}>
+                  {emp.name} {/* only show name */}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-
-         Phone 
-        <div className="space-y-2">
-          <Label>Phone Number *</Label>
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter phone number" type="tel" />
-        </div>*/}
 
         {/* Date */}
         <div className="space-y-2">
@@ -219,7 +232,7 @@ const BookingPage = () => {
           <Select value={time} onValueChange={setTime}>
             <SelectTrigger><SelectValue placeholder="Select a time" /></SelectTrigger>
             <SelectContent>
-              {availableSlots.length > 0 ? (
+                            {availableSlots.length > 0 ? (
                 availableSlots.map((slotObj: any, idx: number) => {
                   const disabled = !isSlotAvailable(idx);
                   return (
@@ -234,7 +247,7 @@ const BookingPage = () => {
                   );
                 })
               ) : (
-                                <div className="px-3 py-2 text-sm text-muted-foreground">
+                <div className="px-3 py-2 text-sm text-muted-foreground">
                   No slots available
                 </div>
               )}
@@ -262,5 +275,3 @@ const BookingPage = () => {
 };
 
 export default BookingPage;
-
-             
