@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -36,7 +37,8 @@ const queryClient = new QueryClient();
 const DashboardWrapper = () => {
   const userId = localStorage.getItem("userId");
   if (!userId) {
-    return <LoginPage />;
+    // Redirect to /login instead of just rendering the component
+    return <Navigate to="/auth" replace />;
   }
   return <Dashboard userId={userId} />;
 };
@@ -48,6 +50,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<DashboardWrapper />} />
           <Route path="/auth" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/business/register" element={<BusinessRegistrationForm />} />
